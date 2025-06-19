@@ -22,4 +22,22 @@ if [ -f ".env" ] && ! grep -q "APP_KEY=" .env; then
   php artisan key:generate
 fi
 
+# Aguardar o banco de dados estar disponível
+if [ ! -z "$DB_HOST" ]; then
+  echo "Aguardando o banco de dados..."
+  until nc -z -v -w30 $DB_HOST 3306; do
+    sleep 1
+  done
+fi
+
+# Executar migrations do Laravel (para Sanctum)
+if [ -f "artisan" ]; then
+  php artisan migrate --force
+fi
+
+# Publicar configurações do Sanctum
+if [ -f "artisan" ]; then
+  php artisan vendor:publish --provider="Laravel\Sanctum\SanctumServiceProvider" --force
+fi
+
 exec "$@"
