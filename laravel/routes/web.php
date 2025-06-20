@@ -3,28 +3,31 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Transporte\OlhoVivo\OlhoVivoController;
 
-Route::get('/', function () {
-    // return view('welcome');
-    return view('teste');
-});
-
-// Route::get('/dash', function () {
-//     return view('pages.dashboard');
-// });
 
 Route::get('/login', [AuthController::class, 'loginView'])->name('loginView');
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 
 
 Route::middleware(['auth:sanctum'])->group(function () {
-    Route::get('/dashboard', function () {
-        return view('pages.dashboard');
-    })->name('dashboard');
+    
+    Route::get('/', function () {
+        return view('teste');
+    });
 
-    Route::get('/user', function (Request $request) {
-        return $request->user();
-    })->name('user');
+    Route::get('/dashboard', function () {
+        session(['search' => '']);
+        return view('pages.dashboard');
+    })->name('dashboard.index');
+
+    Route::controller(OlhoVivoController::class)->group(function () {
+        Route::get('/testOlhoVivo',  'index')->name('olhoVivo.index');
+        Route::post('/testOlhoVivo', 'search')->name('olhoVivo.search');
+        Route::post('/olhoVivo/{cl}/{lc}/{lt}/{sl}/{tl}/{tp}/{ts}/{name_bus}/addLine', 'addLine')->name('olhoVivo.addLine');
+        // Route::post('/addLine',      'addLine')->name('olhoVivo.addLine');
+    });
+
 });
 
 
