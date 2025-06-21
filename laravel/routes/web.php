@@ -26,6 +26,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/testOlhoVivo', 'search')->name('olhoVivo.search');
         Route::post('/olhoVivo/{cl}/{lc}/{lt}/{sl}/{tl}/{tp}/{ts}/{name_bus}/addLine', 'addLine')->name('olhoVivo.addLine');
         // Route::post('/addLine',      'addLine')->name('olhoVivo.addLine');
+        Route::delete('/olhoVivo/{id}/{cl}/removeLine',  'removeLine')->name('olhoVivo.removeLine');
     });
 
 });

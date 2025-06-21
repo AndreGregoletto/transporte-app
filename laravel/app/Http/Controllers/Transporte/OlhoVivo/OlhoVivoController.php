@@ -21,7 +21,7 @@ class OlhoVivoController extends Controller
 
     public function index($aResponse = null, $error = null)
     {
-        $myLines = $this->myBusController->index();
+        $myLines = $this->myBusController->index(auth()->id());
         $search  = session('search', '');
 
         return view('pages.transport.olhoVivo.search', [
@@ -33,6 +33,20 @@ class OlhoVivoController extends Controller
             'search'    => $search, 
             'success'   => '',
         ]);
+    }
+
+    public function removeMyLine($aSearch)
+    {
+        $myLines   = $this->myBusController->index(auth()->id())->getData();
+        $aResponse = [];
+
+        if(!empty($myLines)) {
+            foreach ($myLines as $myLine) {
+                $aResponse[$myLine->cl] = $myLine;
+            }
+        }
+
+        return $aResponse;
     }
 
     public function search(Request $request, $error = null, $success = null)
@@ -48,7 +62,11 @@ class OlhoVivoController extends Controller
         $msgErro = empty($aLines) ? 'Nenhuma linha encontrada para a consulta.' : null;
 
         if ($msgErro == null) {
+            $aMyLines = $this->removeMyLine($iLine);
+
             foreach ($aLines as $aLine) {
+                if($aMyLines[$aLine['cl']] ?? false) continue; 
+
                 $sl = $aLine['sl'];
                 $valueTp = $sl == 1 ? 'tp' : 'ts';
 
@@ -65,8 +83,9 @@ class OlhoVivoController extends Controller
         }
 
         $error = $msgErro ?? $error;
+        $error = empty($aResponse) ? 'Nenhuma linha encontrada.' : $error;
 
-        $myLines = $this->myBusController->index();
+        $myLines = $this->myBusController->index(auth()->id());
         
         return view('pages.transport.olhoVivo.search', [
             'title'     => 'Olho Vivo',
@@ -89,7 +108,10 @@ class OlhoVivoController extends Controller
         $request->merge(['search' => $search]);
 
         if ($myBus->getStatusCode() == 200) {
-            $error = 'Linha já adicionada.';
+            $response = $this->myBusController->update($cl);
+            if($response->getStatusCode() == 200) {
+                $success = 'Linha adicionada com sucesso.';
+            }
         }
 
         if ($myBus->getStatusCode() == 404) {
@@ -113,9 +135,31 @@ class OlhoVivoController extends Controller
         return $this->search($request, $error, $success);
     }
 
-    public function removeLine(Request $request)
+    public function removeLine(Request $request, $id, $cl)
     {
-        return response()->json(['message' => 'Remove line functionality not implemented yet.']);
+        $error   = null;
+        $success = null;
+        $myBus   = $this->myBusController->show($cl);
+        $search  = session('search', '');
+        $request->merge(['search' => $search]);
+
+        try {
+            if ($myBus->getStatusCode() != 200) {
+                throw new \Exception('Linha não encontrada.');
+            } 
+
+            $response = $this->myBusController->destroy($id, $cl);
+
+            if($response->getStatusCode() == 200) {
+                $success = 'Linha removida com sucesso.';
+            } else {
+                $error = 'Erro ao remover a linha.';
+            }
+        } catch (\Throwable $th) {
+            $error = 'Linha não encontrada.';
+        }
+
+        return $this->search($request, $error, $success);
     }
 
     public function getLines(Request $request)

@@ -42,45 +42,45 @@
             <div class="row mt-4">
                 @foreach ($aResponse as $key => $value)
                     <div class="col-md-12 mb-4">
-                            <div class=" col-md-12">
-                                <div class="card border-left-primary shadow h-100 py-2">
-                                    <div class="card-body">
-                                        <div class="row no-gutters align-items-center">
-                                            <div class="col mr-2">
-                                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $value['name'] }}</div>
-                                            </div>
-                                                <button class="btn bg-gradient-info btn-icon-split mr-2">
-                                                    <span class="icon text-white-50 text-gray-100">
-                                                        <i class="fas fa-info-circle"></i>
-                                                    </span>
-                                                </button>
-                                                <form action="{{ 
-                                                    route('olhoVivo.addLine',[
-                                                        'cl'       => $key,
-                                                        'lc'       => $value['lc'],
-                                                        'lt'       => $value['lt'],
-                                                        'sl'       => $value['sl'],
-                                                        'tl'       => $value['tl'],
-                                                        'tp'       => $value['tp'],
-                                                        'ts'       => $value['ts'],
-                                                        'name_bus' => $value['name'],
-                                                    ])
-                                                }}" method="POST">
-                                                    @csrf
-                                                    <button class="btn bg-gradient-success btn-icon-split mr-2" type="submit">
-                                                        <span class="icon text-white-50 text-gray-100">
-                                                            <i class="fas fa-plus"></i>
-                                                        </span>
-                                                    </button>
-                                                </form>
-                                            <div class="col-auto">
-                                                <i class="fas fa-bus fa-2x text-gray-400"></i>
-                                            </div>
+                        <div class=" col-md-12">
+                            <div class="card border-left-primary shadow h-100 py-2">
+                                <div class="card-body">
+                                    <div class="row no-gutters align-items-center">
+                                        <div class="col mr-2">
+                                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $value['name'] }}</div>
+                                        </div>
+                                        <button class="btn bg-gradient-info btn-icon-split mr-2">
+                                            <span class="icon text-white-50 text-gray-100">
+                                                <i class="fas fa-info-circle"></i>
+                                            </span>
+                                        </button>
+                                        <form action="{{ 
+                                            route('olhoVivo.addLine',[
+                                                'cl'       => $key,
+                                                'lc'       => $value['lc'],
+                                                'lt'       => $value['lt'],
+                                                'sl'       => $value['sl'],
+                                                'tl'       => $value['tl'],
+                                                'tp'       => $value['tp'],
+                                                'ts'       => $value['ts'],
+                                                'name_bus' => $value['name'],
+                                            ])
+                                        }}" method="POST">
+                                            @csrf
+                                            <button class="btn bg-gradient-success btn-icon-split mr-2" type="submit">
+                                                <span class="icon text-white-50 text-gray-100">
+                                                    <i class="fas fa-plus"></i>
+                                                </span>
+                                            </button>
+                                        </form>
+                                        <div class="col-auto">
+                                            <i class="fas fa-bus fa-2x text-gray-400"></i>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                    </div>
                 @endforeach
             </div>
         </div>
@@ -114,7 +114,12 @@
                                                 <i class="fas fa-eye"></i>
                                             </span>
                                         </button>
-                                        <button class="btn bg-gradient-danger btn-icon-split mr-2" type="submit">
+                                        <button 
+                                            class="btn bg-gradient-danger btn-icon-split mr-2" 
+                                            type="button" 
+                                            data-toggle="modal" 
+                                            data-target="#removeLineModal-{{ $line->id }}"
+                                        >
                                             <span class="icon text-white-50 text-gray-100">
                                                 <i class="fas fa-minus"></i>
                                             </span>
@@ -126,6 +131,17 @@
                                 </div>
                             </div>
                         </div>
+                  <x-layout.modal.logout />
+
+                    <x-layout.modal.olho-vivo.remove-line-modal 
+                        :id="$line->id" 
+                        :cl="$line->cl" 
+                        :lt="$line->lt" 
+                        :tl="$line->tl" 
+                        :tp="$line->tp" 
+                        :ts="$line->ts" 
+                        :sl="$line->sl" 
+                    />
                     @endforeach
                 </div>
             @endif

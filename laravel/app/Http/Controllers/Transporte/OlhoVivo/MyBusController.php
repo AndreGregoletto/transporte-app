@@ -12,11 +12,11 @@ class MyBusController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index($id)
     {
         try {
             $aResponse = MyBus::with('user')
-                ->whereUserId(auth()->id())
+                ->whereUserId($id)
                 ->whereStatus(true) 
                 ->get();
     
@@ -87,16 +87,45 @@ class MyBusController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(string $cl)
     {
-        //
+        try {
+            $myLine = MyBus::whereCl($cl)
+                ->whereUserId(auth()->id())
+                    ->update([
+                    'status' => true
+                ]);
+
+            return response()->json([
+                'message' => 'Linha Adicionada com sucesso.'
+            ], 200);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'error' => 'Erro ao adicionar a linha: ' . $th->getMessage()
+            ], 500);
+        }
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy($id, $cl)
     {
-        //
+        try {
+            $myLine = MyBus::whereId($id)
+                ->whereCl($cl)
+                ->whereUserId(auth()->id())
+                    ->update([
+                    'status' => false
+                ]);
+
+            return response()->json([
+                'message' => 'Linha removida com sucesso.'
+            ], 200);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'error' => 'Erro ao remover a linha: ' . $th->getMessage()
+            ], 500);
+        }
     }
 }
