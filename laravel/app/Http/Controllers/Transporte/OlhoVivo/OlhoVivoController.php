@@ -5,33 +5,40 @@ use App\Http\Controllers\Controller;
 use App\Services\OlhoVivoServices;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Transporte\OlhoVivo\MyBusController;
+use App\Models\Imports\OlhoVivo\Frequency;
+use App\Http\Controllers\Transporte\OlhoVivo\Import\FrequencyController;
 
 class OlhoVivoController extends Controller
 {
     private $olhoVivoService;
     private $myBusController;
+    private $frequencyController;
 
     public function __construct(
         OlhoVivoServices $olhoVivoService,
-        MyBusController $myBusController
+        MyBusController $myBusController,
+        FrequencyController $frequencyController,
     ) {
         $this->olhoVivoService = $olhoVivoService;
         $this->myBusController = $myBusController;
+        $this->frequencyController = $frequencyController;
     }
 
     public function index($aResponse = null, $error = null)
     {
-        $myLines = $this->myBusController->index(auth()->id());
         $search  = session('search', '');
+        $myLines = $this->myBusController->index(auth()->id())->getData() ?? [];
 
         return view('pages.transport.olhoVivo.search', [
-            'title'     => 'Olho Vivo',
-            'subtitle'  => 'Consulta de linhas de ônibus',
-            'aResponse' => $aResponse ?? [],
-            'myLines'   => $myLines->getData() ?? [],
-            'error'     => $error,
-            'search'    => $search, 
-            'success'   => '',
+            'title'           => 'Olho Vivo',
+            'subtitle'        => 'Consulta de linhas de ônibus',
+            'aResponse'       => $aResponse ?? [],
+            'myLines'         => $myLines,
+            'error'           => $error,
+            'search'          => $search, 
+            'success'         => '',
+            'userFrequencies' => $this->getFrequencies($myLines),
+            'frequencies'     => [],
         ]);
     }
 
@@ -51,7 +58,7 @@ class OlhoVivoController extends Controller
 
     public function search(Request $request, $error = null, $success = null)
     {
-        
+        $myLines   = $this->myBusController->index(auth()->id())->getData() ?? [];
         $iLine     = $request->input('search');
         $aLines    = $this->olhoVivoService->getLines($iLine);
         $aResponse = [];
@@ -65,36 +72,40 @@ class OlhoVivoController extends Controller
             $aMyLines = $this->removeMyLine($iLine);
 
             foreach ($aLines as $aLine) {
-                if($aMyLines[$aLine['cl']] ?? false) continue; 
+                if ($aMyLines[$aLine['cl']] ?? false) continue;
 
                 $sl = $aLine['sl'];
                 $valueTp = $sl == 1 ? 'tp' : 'ts';
 
                 $aResponse[$aLine['cl']] = [
                     'name' => "{$aLine['lt']}-{$aLine['tl']} {$aLine[$valueTp]}",
-                    'lc'  => $aLine['lc'] == false ? 'N' : $aLine['lc'],
-                    'lt'  => $aLine['lt'],
-                    'sl'  => $aLine['sl'],
-                    'tl'  => $aLine['tl'],
-                    'tp'  => $aLine['tp'],
-                    'ts'  => $aLine['ts'],
+                    'lc' => $aLine['lc'] == false ? 'N' : $aLine['lc'],
+                    'lt' => $aLine['lt'],
+                    'sl' => $aLine['sl'],
+                    'tl' => $aLine['tl'],
+                    'tp' => $aLine['tp'],
+                    'ts' => $aLine['ts'],
                 ];
             }
         }
 
         $error = $msgErro ?? $error;
         $error = empty($aResponse) ? 'Nenhuma linha encontrada.' : $error;
+        // Converter $aResponse em array de objetos stdClass
+        $oResponse = array_map(function ($item) {
+            return (object) $item;
+        }, array_values($aResponse));
 
-        $myLines = $this->myBusController->index(auth()->id());
-        
         return view('pages.transport.olhoVivo.search', [
-            'title'     => 'Olho Vivo',
-            'subtitle'  => 'Consulta de linhas de ônibus',
-            'myLines'   => $myLines->getData() ?? [],
-            'aResponse' => $aResponse,
-            'error'     => $error,
-            'search'    => $iLine,
-            'success'   => $success,
+            'title'           => 'Olho Vivo',
+            'subtitle'        => 'Consulta de linhas de ônibus',
+            'myLines'         => $myLines,
+            'aResponse'       => $aResponse,
+            'error'           => $error,
+            'search'          => $iLine,
+            'success'         => $success,
+            'userFrequencies' => $this->getFrequencies($myLines),
+            'frequencies'     => $this->getFrequencies($oResponse),
         ]);
     }
 
@@ -131,7 +142,6 @@ class OlhoVivoController extends Controller
             $success = $addLine->getStatusCode() == 201 ? 'Linha adicionada com sucesso.' : null;
         }
 
-
         return $this->search($request, $error, $success);
     }
 
@@ -162,8 +172,25 @@ class OlhoVivoController extends Controller
         return $this->search($request, $error, $success);
     }
 
-    public function getLines(Request $request)
+    public function getFrequencies($myLines)
     {
-        return response()->json(['message' => 'Get lines functionality not implemented yet.']);
+        $aTripId = [];
+        $aFrequencies = [];
+        
+        if (!is_array($myLines)) {
+            $myLines = [$myLines];
+        }
+
+        $aLines = array_map(function($line) use (&$aTripId, &$aFrequencies) {
+            if (!isset($line->sl, $line->lt, $line->tl)) {
+                throw new \InvalidArgumentException('Objeto de linha inválido: propriedades sl, lt ou tl ausentes');
+            }
+            $destiny = $line->sl == '1' ? 0 : 1;
+            $aTripId = $line->lt . '-' . $line->tl . '-' . $destiny;
+            $aFrequencies[$line->lt . '-' . $line->tl . '-' . $line->sl] = $this->frequencyController->showLine($aTripId)->getData();
+            return $line;
+        }, $myLines);
+
+        return $aFrequencies;
     }
 }

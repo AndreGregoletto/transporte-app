@@ -49,7 +49,12 @@
                                         <div class="col mr-2">
                                             <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $value['name'] }}</div>
                                         </div>
-                                        <button class="btn bg-gradient-info btn-icon-split mr-2">
+                                        <button 
+                                            class="btn bg-gradient-info btn-icon-split mr-2"
+                                            type="button"
+                                            data-toggle="modal"
+                                            data-target="#infoLineModal-{{ $key }}"
+                                        >
                                             <span class="icon text-white-50 text-gray-100">
                                                 <i class="fas fa-info-circle"></i>
                                             </span>
@@ -81,6 +86,16 @@
                             </div>
                         </div>
                     </div>
+                    {{-- Info Line --}}
+                    <x-layout.modal.olho-vivo.info-line-modal
+                        :cl="$key" 
+                        :lt="$value['lt']" 
+                        :tl="$value['tl']" 
+                        :tp="$value['tp']" 
+                        :ts="$value['ts']" 
+                        :sl="$value['sl']" 
+                        :frequency="$frequencies[$value['lt'] . '-' . $value['tl'] . '-' . $value['sl']] ?? []"
+                    />
                 @endforeach
             </div>
         </div>
@@ -103,7 +118,12 @@
                                                 {{ $line->sl == 1 ? $line->tp  : $line->ts }}
                                             </div>
                                         </div>
-                                            <button class="btn bg-gradient-info btn-icon-split mr-2">
+                                            <button 
+                                                class="btn bg-gradient-info btn-icon-split mr-2"
+                                                type="button"
+                                                data-toggle="modal"
+                                                data-target="#infoLineModal-{{ $line->cl }}"
+                                            >
                                                 <span class="icon text-white-50 text-gray-100">
                                                     <i class="fas fa-info-circle"></i>
                                                 </span>
@@ -133,6 +153,18 @@
                         </div>
                   <x-layout.modal.logout />
 
+                    {{-- Info Line --}}
+                    <x-layout.modal.olho-vivo.info-line-modal
+                        :cl="$line->cl" 
+                        :lt="$line->lt" 
+                        :tl="$line->tl" 
+                        :tp="$line->tp" 
+                        :ts="$line->ts" 
+                        :sl="$line->sl" 
+                        :frequency="$userFrequencies[$line->lt . '-' . $line->tl . '-' . $line->sl] ?? []"
+                    />
+
+                    {{-- Remove Line --}}
                     <x-layout.modal.olho-vivo.remove-line-modal 
                         :id="$line->id" 
                         :cl="$line->cl" 
