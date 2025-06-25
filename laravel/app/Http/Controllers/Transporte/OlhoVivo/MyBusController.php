@@ -61,7 +61,6 @@ class MyBusController extends Controller
      */
     public function show(string $id)
     {
-        // dd(MyBus::get());
         try {
             $myBus = MyBus::with('user')
                 ->whereCl($id)

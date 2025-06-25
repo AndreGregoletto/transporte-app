@@ -94,7 +94,7 @@
                         :tp="$value['tp']" 
                         :ts="$value['ts']" 
                         :sl="$value['sl']" 
-                        :frequency="$frequencies[$value['lt'] . '-' . $value['tl'] . '-' . $value['sl']] ?? []"
+                        :frequency="$frequencies[$value['lt'] . '-' . $value['tl']] ?? []"
                     />
                 @endforeach
             </div>
@@ -161,7 +161,7 @@
                         :tp="$line->tp" 
                         :ts="$line->ts" 
                         :sl="$line->sl" 
-                        :frequency="$userFrequencies[$line->lt . '-' . $line->tl . '-' . $line->sl] ?? []"
+                        :frequency="$userFrequencies[$line->lt . '-' . $line->tl] ?? []"
                     />
 
                     {{-- Remove Line --}}

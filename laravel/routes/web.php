@@ -39,6 +39,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::delete('/olhoVivo/{id}/{cl}/removeLine',  'removeLine')->name('olhoVivo.removeLine');
     });
 
+    Route::get('/notFound', function () {
+        return view('pages.notFound');
+    })->name('notFound');
+
+    Route::fallback(function () {
+        return redirect()->route('notFound', ['msg' => 'Página não encontrada']);
+    });
 });
 
 

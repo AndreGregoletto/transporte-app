@@ -121,7 +121,7 @@ class FrequencyController extends Controller
     public function showLine($tripId)
     {
         try {
-            $frequency = Frequency::where('trip_id', $tripId)
+            $frequency = Frequency::where('trip_id', 'like', $tripId . '%')
                 ->select('trip_id', 'start_time', 'end_time', 'headway_secs')
                 ->get();
 

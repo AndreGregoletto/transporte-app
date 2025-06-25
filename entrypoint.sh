@@ -37,7 +37,7 @@ fi
 
 # Publicar configurações do Sanctum
 if [ -f "artisan" ]; then
-  php artisan vendor:publish --provider="Laravel\Sanctum\SanctumServiceProvider" --force
+  # php artisan vendor:publish --provider="Laravel\Sanctum\SanctumServiceProvider" --force
 fi
 
 exec "$@"

@@ -20,7 +20,6 @@
         }
     </style>
 @endpush
-
 <div 
     class="modal fade" 
     id="infoLineModal-{{ $cl }}" 
@@ -80,65 +79,93 @@
         document.addEventListener('DOMContentLoaded', function () {
             const frequencyData = @json($frequency);
 
-            // Verificar se há dados antes de criar o gráfico
-            if (frequencyData.length > 0) {
-                // Processar os dados para o gráfico
-                const labels = frequencyData.map(item => `${item.start_time.slice(0, 5)}-${item.end_time.slice(0, 5)}`);
-                const busCounts = frequencyData.map(item => {
-                    // Converter start_time e end_time para segundos
-                    const start = item.start_time.split(':').reduce((acc, time, index) => acc + time * Math.pow(60, 2 - index), 0);
-                    const end = item.end_time.split(':').reduce((acc, time, index) => acc + time * Math.pow(60, 2 - index), 0);
-                    const duration = (end - start) + 1; // Duração do período em segundos + 1 segundo
-                    return Math.floor(duration / item.headway_secs); // Número de ônibus
-                });
+            if (!frequencyData || (!frequencyData.week && !frequencyData.weekend)) {
+                console.error('Nenhum dado de frequência disponível para a linha {{ $cl }}');
+                return;
+            }
 
-                // Configuração do gráfico
-                const ctx = document.getElementById('busFrequencyChart-{{ $cl }}').getContext('2d');
-                new Chart(ctx, {
-                    type: 'line', // Gráfico de linha
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Número de Ônibus',
-                            data: busCounts,
-                            backgroundColor: 'rgba(54, 162, 235, 0.2)', // Preenchimento sob a linha
+            const processData = (data) => {
+                if (!data || !Array.isArray(data)) return { labels: [], busCounts: [] };
+                return {
+                    labels: data.map(item => `${item.start_time.slice(0, 5)}-${item.end_time.slice(0, 5)}`),
+                    busCounts: data.map(item => {
+                        const start = item.start_time.split(':').reduce((acc, time, index) => acc + time * Math.pow(60, 2 - index), 0);
+                        const end = item.end_time.split(':').reduce((acc, time, index) => acc + time * Math.pow(60, 2 - index), 0);
+                        const duration = (end - start) + 1;
+                        return Math.floor(duration / item.headway_secs);
+                    })
+                };
+            };
+
+            const weekData = processData(frequencyData.week);
+            const weekendData = processData(frequencyData.weekend);
+
+            const allLabels = [...new Set([...weekData.labels, ...weekendData.labels])].sort();
+
+            const alignData = (labels, dataLabels, dataCounts) => {
+                return labels.map(label => {
+                    const index = dataLabels.indexOf(label);
+                    return index !== -1 ? dataCounts[index] : 0;
+                });
+            };
+
+            const weekBusCounts = alignData(allLabels, weekData.labels, weekData.busCounts);
+            const weekendBusCounts = alignData(allLabels, weekendData.labels, weekendData.busCounts);
+
+            const today = new Date().getDay(); 
+            const isWeekday = today >= 1 && today <= 5; 
+
+            const canvas = document.getElementById('busFrequencyChart-{{ $cl }}');
+            if (!canvas) {
+                console.error('Canvas não encontrado: busFrequencyChart-{{ $cl }}');
+                return;
+            }
+
+            const ctx = canvas.getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: allLabels,
+                    datasets: [
+                        {
+                            label: 'Dias Úteis',
+                            data: weekBusCounts,
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
                             borderColor: 'rgba(54, 162, 235, 1)',
                             borderWidth: 2,
-                            fill: true, // Preencher área sob a linha
-                            tension: 0.4, // Suavizar a curva
-                            pointRadius: 5, // Tamanho dos pontos
-                            pointBackgroundColor: 'rgba(54, 162, 235, 1)' // Cor dos pontos
-                        }]
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 5,
+                            pointBackgroundColor: 'rgba(54, 162, 235, 1)',
+                            hidden: !isWeekday
+                        },
+                        {
+                            label: 'Final de Semana',
+                            data: weekendBusCounts,
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 5,
+                            pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+                            hidden: isWeekday
+                        }
+                    ]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Número de Ônibus' },
+                            ticks: { stepSize: 1 }
+                        },
+                        x: { title: { display: true, text: 'Período' } }
                     },
-                    options: {
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                title: {
-                                    display: true,
-                                    text: 'Número de Ônibus'
-                                },
-                                ticks: {
-                                    stepSize: 1 // Apenas números inteiros
-                                }
-                            },
-                            x: {
-                                title: {
-                                    display: true,
-                                    text: 'Período'
-                                }
-                            }
-                        },
-                        plugins: {
-                            legend: {
-                                display: true,
-                                position: 'top'
-                            }
-                        },
-                        maintainAspectRatio: false
-                    }
-                });
-            }
+                    plugins: { legend: { display: true, position: 'top' } },
+                    maintainAspectRatio: false
+                }
+            });
         });
     </script>
 @endpush

@@ -15,12 +15,12 @@ class OlhoVivoController extends Controller
     private $frequencyController;
 
     public function __construct(
-        OlhoVivoServices $olhoVivoService,
-        MyBusController $myBusController,
+        OlhoVivoServices    $olhoVivoService,
+        MyBusController     $myBusController,
         FrequencyController $frequencyController,
     ) {
-        $this->olhoVivoService = $olhoVivoService;
-        $this->myBusController = $myBusController;
+        $this->olhoVivoService     = $olhoVivoService;
+        $this->myBusController     = $myBusController;
         $this->frequencyController = $frequencyController;
     }
 
@@ -174,22 +174,23 @@ class OlhoVivoController extends Controller
 
     public function getFrequencies($myLines)
     {
-        $aTripId = [];
         $aFrequencies = [];
-        
+
         if (!is_array($myLines)) {
             $myLines = [$myLines];
         }
 
-        $aLines = array_map(function($line) use (&$aTripId, &$aFrequencies) {
+        foreach ($myLines as $line) {
             if (!isset($line->sl, $line->lt, $line->tl)) {
                 throw new \InvalidArgumentException('Objeto de linha inválido: propriedades sl, lt ou tl ausentes');
             }
-            $destiny = $line->sl == '1' ? 0 : 1;
-            $aTripId = $line->lt . '-' . $line->tl . '-' . $destiny;
-            $aFrequencies[$line->lt . '-' . $line->tl . '-' . $line->sl] = $this->frequencyController->showLine($aTripId)->getData();
-            return $line;
-        }, $myLines);
+
+            $aTripId = $line->lt . '-' . $line->tl;
+            $aFrequencies[$aTripId] = [
+                'weekend' => $this->frequencyController->showLine($aTripId . '-1')->getData(),
+                'week'    => $this->frequencyController->showLine($aTripId . '-0')->getData(),
+            ];
+        }
 
         return $aFrequencies;
     }
