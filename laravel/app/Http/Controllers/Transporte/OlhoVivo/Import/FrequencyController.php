@@ -6,67 +6,75 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Imports\OlhoVivo\Frequency;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB; // Importação do facade DB
+use Illuminate\Support\Facades\DB;
 
 class FrequencyController extends Controller
 {
-    
     public function importFrequencies(Request $request)
     {
         ini_set('memory_limit', '512M');
         ini_set('max_execution_time', '300');
 
-        // Verificar se o arquivo foi enviado
         if (!$request->hasFile('file')) {
             return response()->json(['error' => 'Nenhum arquivo enviado'], 400);
         }
 
         $file = $request->file('file');
 
-        // Validar extensão
         if (!in_array(strtolower($file->getClientOriginalExtension()), ['txt', 'csv'])) {
             return response()->json(['error' => 'O arquivo deve ser .txt ou .csv'], 400);
         }
 
+        $result = $this->importFromFile($file->getRealPath(), $file->getClientOriginalName());
+
+        if (isset($result['error'])) {
+            return response()->json($result, 500);
+        }
+
+        return response()->json(['message' => 'Frequências importadas com sucesso']);
+    }
+
+    protected function importFromFile(string $filePath, string $fileName): array
+    {
         $expectedHeader = ['trip_id', 'start_time', 'end_time', 'headway_secs'];
         $batchSize = 500;
         $batch = [];
         $errors = [];
 
         try {
-            $stream = fopen($file->getRealPath(), 'r');
+            $stream = fopen($filePath, 'r');
             if ($stream === false) {
-                return response()->json(['error' => 'Não foi possível abrir o arquivo'], 500);
+                Log::error("Não foi possível abrir o arquivo: {$fileName}");
+                return ['error' => 'Não foi possível abrir o arquivo'];
             }
 
             $header = fgetcsv($stream, 0, ';');
             $header = array_map('trim', (array)$header);
 
-            // Validar cabeçalho
             if ($header !== $expectedHeader) {
-                Log::error("Cabeçalho inválido no arquivo {$file->getClientOriginalName()}:", ['lido' => $header, 'esperado' => $expectedHeader]);
-                return response()->json(['error' => 'Formato de cabeçalho inválido'], 400);
+                Log::error("Cabeçalho inválido no arquivo {$fileName}:", ['lido' => $header, 'esperado' => $expectedHeader]);
+                fclose($stream);
+                return ['error' => 'Formato de cabeçalho inválido'];
             }
 
             $lineCount = 0;
             while (($line = fgetcsv($stream, 0, ';')) !== false) {
                 $lineCount++;
                 if ($lineCount % 1000 === 0) {
-                    Log::info("Processando linha $lineCount do arquivo {$file->getClientOriginalName()}");
+                    Log::info("Processando linha {$lineCount} do arquivo {$fileName}");
                 }
 
                 if (count($line) !== 4) {
-                    Log::warning("Linha inválida no arquivo {$file->getClientOriginalName()}:", ['linha' => $line]);
+                    Log::warning("Linha inválida no arquivo {$fileName}:", ['linha' => $line]);
                     continue;
                 }
 
                 $line = array_map('trim', $line);
 
-                // Validar formato de tempo e headway_secs
                 if (!preg_match('/^\d{2}:\d{2}:\d{2}$/', $line[1]) ||
                     !preg_match('/^\d{2}:\d{2}:\d{2}$/', $line[2]) ||
                     !is_numeric($line[3]) || (int)$line[3] <= 0) {
-                    Log::warning("Dados inválidos no arquivo {$file->getClientOriginalName()}:", ['linha' => $line]);
+                    Log::warning("Dados inválidos no arquivo {$fileName}:", ['linha' => $line]);
                     continue;
                 }
 
@@ -88,23 +96,18 @@ class FrequencyController extends Controller
             }
 
             fclose($stream);
+
+            if (!empty($batch)) {
+                DB::transaction(function () use ($batch) {
+                    Frequency::insert($batch);
+                });
+            }
+
+            return ['message' => "Arquivo {$fileName} importado com sucesso"];
         } catch (\Exception $e) {
-            Log::error("Erro ao processar arquivo {$file->getClientOriginalName()}: " . $e->getMessage(), ['exception' => $e]);
-            return response()->json(['error' => 'Erro ao processar arquivo: ' . $e->getMessage()], 500);
+            Log::error("Erro ao processar arquivo {$fileName}: " . $e->getMessage(), ['exception' => $e]);
+            return ['error' => "Erro ao processar arquivo {$fileName}: {$e->getMessage()}"];
         }
-
-        // Inserir o restante do batch
-        if (!empty($batch)) {
-            DB::transaction(function () use ($batch) {
-                Frequency::insert($batch);
-            });
-        }
-
-        if (!empty($errors)) {
-            return response()->json(['error' => 'Erros ocorreram durante a importação', 'details' => $errors], 500);
-        }
-
-        return response()->json(['message' => 'Frequências importadas com sucesso']);
     }
 
     public function index()
@@ -131,7 +134,8 @@ class FrequencyController extends Controller
             return response()->json($frequency);
         } catch (\Throwable $th) {
             Log::error('Erro ao buscar frequência: ' . $th->getMessage(), ['exception' => $th]);
-            return [];
+            return response()->json([]);
         }
     }
 }
+?>

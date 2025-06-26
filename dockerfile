@@ -1,4 +1,3 @@
-# Base image PHP 8.3 com FPM
 FROM php:8.3-fpm
 
 # Instalar dependências do sistema
@@ -10,10 +9,6 @@ RUN apt-get update --fix-missing && apt-get install -y --no-install-recommends \
 
 # Instalar Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-
-# Adicionar script de entrada customizado
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Definir diretório de trabalho
 WORKDIR /var/www
@@ -29,5 +24,4 @@ RUN chown -R www-data:www-data /var/www \
     && chmod -R 755 /var/www/storage \
     && chmod -R 755 /var/www/bootstrap/cache
 
-ENTRYPOINT ["entrypoint.sh"]
 CMD ["php-fpm"]
